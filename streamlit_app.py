@@ -154,6 +154,12 @@ def _init_state() -> None:
         "last_run_idea": "",
         "last_run_status": None,
         "last_run_workspace": "",
+        # Chat tab state. chat_history is a list of {"role": "user|assistant",
+        # "content": str, "tasks": list[dict]?}. chat_tasks tracks the
+        # planner output from the most recent turn for the sticky todo panel.
+        "chat_history": [],
+        "chat_tasks": [],
+        "chat_busy": False,
     }
     for key, val in defaults.items():
         st.session_state.setdefault(key, val)
@@ -330,6 +336,143 @@ def _run_team_worker(
 
 
 # ---------------------------------------------------------------------------
+# Chat worker — drives a DataInterpreter for a single chat turn.
+# ---------------------------------------------------------------------------
+
+
+def _run_chat_worker(
+    user_message: str,
+    prior_history: list[dict[str, str]],
+    session_config: Any,
+    sink: list[str],
+    lock: threading.Lock,
+    status: dict[str, Any],
+) -> None:
+    """Run a single agentic chat turn on a worker thread.
+
+    Uses :class:`metagpt.roles.di.data_interpreter.DataInterpreter` in
+    ``plan_and_act`` mode so the Planner produces a Plan whose ``tasks``
+    we can stream back to the UI as a live todo list. ``session_config``
+    is the per-session :class:`metagpt.config2.Config` built by
+    :func:`apply_user_config` — the global singleton is never touched.
+
+    The role object is parked on ``status['role']`` so the polling UI can
+    read ``role.planner.plan.tasks`` while the run is in flight.
+    """
+
+    capture = _StreamCapture(sink, lock)
+
+    try:
+        from loguru import logger as _logger
+
+        sink_id = _logger.add(capture, level="INFO", format="{time:HH:mm:ss} | {level: <7} | {message}")
+    except Exception:
+        sink_id = None
+
+    log_handler = logging.StreamHandler(capture)
+    log_handler.setLevel(logging.INFO)
+    logging.getLogger().addHandler(log_handler)
+
+    try:
+        with redirect_stdout(capture), redirect_stderr(capture):
+            from megan import Context
+            from metagpt.roles.di.data_interpreter import DataInterpreter
+
+            ctx = Context(config=session_config)
+            di = DataInterpreter(
+                context=ctx,
+                react_mode="plan_and_act",
+                max_react_loop=5,
+                use_reflection=False,
+            )
+            status["role"] = di
+
+            # Assemble a single requirement from prior turns + new user message
+            # so DataInterpreter sees the full chat context.
+            history_lines: list[str] = []
+            for turn in prior_history[-6:]:
+                speaker = "User" if turn["role"] == "user" else "Megan"
+                history_lines.append(f"{speaker}: {turn['content']}")
+            history_block = "\n".join(history_lines)
+            if history_block:
+                requirement = f"Recent conversation:\n{history_block}\n\n" f"New user request:\n{user_message}"
+            else:
+                requirement = user_message
+
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                result = loop.run_until_complete(di.run(with_message=requirement))
+            finally:
+                loop.close()
+
+            reply = result.content if result is not None else ""
+            tasks_dump = [
+                {
+                    "task_id": t.task_id,
+                    "instruction": t.instruction,
+                    "is_finished": bool(t.is_finished),
+                    "is_success": bool(t.is_success),
+                }
+                for t in di.planner.plan.tasks
+            ]
+            status["reply"] = reply
+            status["tasks"] = tasks_dump
+            status["state"] = "done"
+    except Exception as exc:  # pragma: no cover - surfaced to UI
+        status["state"] = "error"
+        status["error"] = f"{type(exc).__name__}: {exc}"
+        with lock:
+            sink.append(f"\n[megan] CHAT ERROR: {type(exc).__name__}: {exc}\n")
+    finally:
+        if sink_id is not None:
+            try:
+                from loguru import logger as _logger
+
+                _logger.remove(sink_id)
+            except Exception:
+                pass
+        logging.getLogger().removeHandler(log_handler)
+
+
+def _render_todo_html(tasks: list[dict[str, Any]], current_task_id: str | None) -> str:
+    """Build the HTML for the live todo list panel.
+
+    Each task is rendered as a row with one of three states:
+      ✓ finished, ▸ in-progress (matches current_task_id), ○ pending.
+    The instruction text is html-escaped before being interpolated.
+    """
+
+    if not tasks:
+        return (
+            '<div class="megan-todo megan-todo--empty">'
+            "Megan hasn't decomposed a plan yet. Send a message to start."
+            "</div>"
+        )
+    rows: list[str] = []
+    for task in tasks:
+        if task.get("is_finished"):
+            state = "done"
+            mark = "✓"
+        elif current_task_id and task.get("task_id") == current_task_id:
+            state = "running"
+            mark = "▸"
+        else:
+            state = "pending"
+            mark = "○"
+        instruction = html.escape(task.get("instruction", ""))
+        task_id = html.escape(task.get("task_id", ""))
+        rows.append(
+            f'<li class="megan-todo-item megan-todo-item--{state}">'
+            f'<span class="megan-todo-mark">{mark}</span>'
+            f'<span class="megan-todo-id">{task_id}</span>'
+            f'<span class="megan-todo-text">{instruction}</span>'
+            "</li>"
+        )
+    return '<ul class="megan-todo">' + "".join(rows) + "</ul>"
+
+
+# ---------------------------------------------------------------------------
 # UI building blocks
 # ---------------------------------------------------------------------------
 
@@ -448,6 +591,10 @@ def render_api_key_tab() -> None:
             ok, msg = apply_user_config()
             if ok:
                 msg_col.success(msg)
+                # Force a rerun so the sidebar status badge picks up the new
+                # config_saved=True value on this turn instead of waiting for
+                # the next user interaction.
+                st.rerun()
             else:
                 msg_col.error(msg)
 
@@ -576,6 +723,129 @@ def render_run_tab() -> None:
                 st.error(status.get("error", "Megan stopped before completing the run."))
 
 
+def render_chat_tab() -> None:
+    with st.container(border=True):
+        st.markdown(
+            '<div class="megan-section-head">'
+            '<span class="megan-step">Chat</span>'
+            '<span class="megan-section-title">Talk to Megan</span>'
+            '<span class="megan-pill">agentic reply</span>'
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            "Megan plans, decomposes, and acts on your request using the same "
+            "DataInterpreter loop as the upstream framework. Watch the live "
+            "todo list on the right."
+        )
+
+        if not st.session_state.config_saved:
+            st.info("Save an API key on the **API keys** tab first.")
+            return
+
+        chat_col, todo_col = st.columns([2, 1])
+
+        # --- Chat history (left column) --------------------------------------
+        with chat_col:
+            history_box = st.container()
+            with history_box:
+                if not st.session_state.chat_history:
+                    st.caption("_No conversation yet — ask Megan to plan, build, or " "analyse something._")
+                for msg in st.session_state.chat_history:
+                    with st.chat_message(msg["role"]):
+                        st.markdown(msg["content"])
+
+        # --- Live todo list (right column) -----------------------------------
+        with todo_col:
+            st.markdown(
+                '<div class="megan-todo-head">'
+                '<span class="megan-todo-title">Todo list</span>'
+                '<span class="megan-todo-sub">planner output</span>'
+                "</div>",
+                unsafe_allow_html=True,
+            )
+            todo_box = st.empty()
+            todo_box.markdown(
+                _render_todo_html(st.session_state.chat_tasks, None),
+                unsafe_allow_html=True,
+            )
+
+        # --- Chat input ------------------------------------------------------
+        user_input = st.chat_input(
+            "Ask Megan to plan, build, or analyse...",
+            disabled=st.session_state.chat_busy,
+        )
+
+        if user_input:
+            st.session_state.chat_busy = True
+            st.session_state.chat_history.append({"role": "user", "content": user_input})
+            prior = list(st.session_state.chat_history[:-1])
+            session_config = st.session_state.get("megan_config")
+
+            sink: list[str] = []
+            lock = threading.Lock()
+            status: dict[str, Any] = {"state": "running", "role": None, "reply": "", "tasks": []}
+            thread = threading.Thread(
+                target=_run_chat_worker,
+                args=(user_input, prior, session_config, sink, lock, status),
+                daemon=True,
+            )
+            thread.start()
+
+            with chat_col:
+                with st.chat_message("user"):
+                    st.markdown(user_input)
+                with st.chat_message("assistant"):
+                    reply_box = st.empty()
+                    reply_box.markdown("_Megan is thinking…_")
+
+                    while thread.is_alive():
+                        with lock:
+                            recent = "".join(sink[-1500:])
+                        tail = "\n".join(recent.splitlines()[-6:])
+                        escaped_tail = html.escape(tail) if tail else ""
+                        reply_box.markdown(
+                            "_Megan is thinking…_\n\n" f'<div class="megan-log megan-log--inline">{escaped_tail}</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                        role = status.get("role")
+                        if role is not None and getattr(role, "planner", None) is not None:
+                            tasks_live = [
+                                {
+                                    "task_id": t.task_id,
+                                    "instruction": t.instruction,
+                                    "is_finished": bool(t.is_finished),
+                                }
+                                for t in role.planner.plan.tasks
+                            ]
+                            current = role.planner.plan.current_task_id
+                            todo_box.markdown(
+                                _render_todo_html(tasks_live, current),
+                                unsafe_allow_html=True,
+                            )
+                        time.sleep(1.0)
+
+                    thread.join(timeout=2)
+
+                    if status.get("state") == "done":
+                        reply = status.get("reply") or "_(no reply)_"
+                        reply_box.markdown(reply)
+                        st.session_state.chat_history.append({"role": "assistant", "content": reply})
+                        st.session_state.chat_tasks = status.get("tasks", [])
+                        todo_box.markdown(
+                            _render_todo_html(st.session_state.chat_tasks, None),
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                        err = status.get("error", "Megan stopped before completing the turn.")
+                        reply_box.error(err)
+                        st.session_state.chat_history.append({"role": "assistant", "content": f":warning: {err}"})
+
+            st.session_state.chat_busy = False
+            st.rerun()
+
+
 def render_about_tab() -> None:
     with st.container(border=True):
         st.markdown(
@@ -610,9 +880,11 @@ def main() -> None:
     render_sidebar()
     render_hero()
 
-    tab_keys, tab_run, tab_about = st.tabs(["API keys", "Run a project", "About Megan"])
+    tab_keys, tab_chat, tab_run, tab_about = st.tabs(["API keys", "Chat", "Run a project", "About Megan"])
     with tab_keys:
         render_api_key_tab()
+    with tab_chat:
+        render_chat_tab()
     with tab_run:
         render_run_tab()
     with tab_about:

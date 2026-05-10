@@ -268,6 +268,117 @@ button[data-baseweb="tab"][aria-selected="true"] {
     color: var(--megan-primary);
 }
 
+/* Inline log (chat assistant "thinking" trace) */
+.megan-log--inline {
+    max-height: 160px;
+    font-size: 0.78rem;
+    margin-top: 8px;
+    padding: 10px 12px;
+}
+
+/* Chat tab — todo list panel */
+.megan-todo-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin: 0 0 10px 0;
+    padding: 0 0 8px 0;
+    border-bottom: 1px dashed var(--megan-border);
+}
+
+.megan-todo-head .megan-todo-title {
+    color: var(--megan-primary-dark);
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: -0.01em;
+}
+
+.megan-todo-head .megan-todo-sub {
+    color: var(--megan-muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.megan-todo {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.megan-todo--empty {
+    color: var(--megan-muted);
+    font-size: 0.85rem;
+    padding: 14px 12px;
+    border: 1px dashed var(--megan-border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.6);
+    text-align: center;
+}
+
+.megan-todo-item {
+    display: grid;
+    grid-template-columns: 22px 36px 1fr;
+    align-items: start;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--megan-border);
+    border-radius: 10px;
+    background: var(--megan-surface);
+    font-size: 0.85rem;
+    line-height: 1.35;
+}
+
+.megan-todo-item--done {
+    border-color: #A7F3D0;
+    background: #ECFDF5;
+}
+
+.megan-todo-item--running {
+    border-color: var(--megan-primary);
+    background: var(--megan-primary-soft);
+    box-shadow: 0 2px 12px rgba(109, 40, 217, 0.12);
+}
+
+.megan-todo-item--pending {
+    background: rgba(255, 255, 255, 0.85);
+}
+
+.megan-todo-mark {
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--megan-muted);
+}
+
+.megan-todo-item--done .megan-todo-mark { color: var(--megan-success); }
+.megan-todo-item--running .megan-todo-mark { color: var(--megan-primary); }
+
+.megan-todo-id {
+    font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+    color: var(--megan-muted);
+    font-size: 0.72rem;
+    padding-top: 2px;
+}
+
+.megan-todo-text {
+    color: var(--megan-text);
+    word-break: break-word;
+}
+
+/* Chat messages */
+[data-testid="stChatMessage"] {
+    background: var(--megan-surface);
+    border: 1px solid var(--megan-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+}
+
 /* Hide Streamlit default chrome that fights the brand */
 #MainMenu { visibility: hidden; }
 footer { visibility: hidden; }
