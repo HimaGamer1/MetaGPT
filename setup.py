@@ -1,4 +1,9 @@
-"""Setup script for MetaGPT."""
+"""Setup script for Megan (multi-agent framework).
+
+Megan is a re-skinned distribution of the upstream MetaGPT framework. The
+import name ``metagpt`` is preserved so that the framework code keeps
+working unchanged; the public brand and console script ship as ``megan``.
+"""
 import subprocess
 from pathlib import Path
 
@@ -96,16 +101,16 @@ extras_require["android_assistant"] = [
 ]
 
 setup(
-    name="metagpt",
-    version="1.0.0",
-    description="The Multi-Agent Framework",
+    name="megan",
+    version="0.1.0",
+    description="Megan — multi-agent software-company framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/geekan/MetaGPT",
-    author="Alexander Wu",
-    author_email="alexanderwu@deepwisdom.ai",
+    url="https://github.com/HimaGamer1/MetaGPT",
+    author="Megan contributors",
+    author_email="",
     license="MIT",
-    keywords="metagpt multi-agent multi-role programming gpt llm metaprogramming",
+    keywords="megan metagpt multi-agent multi-role programming gpt llm metaprogramming",
     packages=find_packages(exclude=["contrib", "docs", "examples", "tests*"]),
     python_requires=">=3.9, <3.12",
     install_requires=requirements,
@@ -115,6 +120,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
+            "megan=metagpt.software_company:app",
             "metagpt=metagpt.software_company:app",
         ],
     },

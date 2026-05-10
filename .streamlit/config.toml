@@ -1,0 +1,23 @@
+# Megan theme — distinct violet/amber palette, deliberately different from
+# the upstream MetaGPT cyan/blue branding.
+
+[theme]
+base = "light"
+primaryColor = "#6D28D9"
+backgroundColor = "#FAF8F5"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#1F2937"
+font = "sans serif"
+
+[server]
+headless = true
+runOnSave = false
+enableXsrfProtection = false
+enableCORS = false
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+showErrorDetails = true
