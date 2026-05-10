@@ -1,0 +1,25 @@
+# Megan theme — distinct violet/amber palette, deliberately different from
+# the upstream MetaGPT cyan/blue branding.
+
+[theme]
+base = "light"
+primaryColor = "#6D28D9"
+backgroundColor = "#FAF8F5"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#1F2937"
+font = "sans serif"
+
+[server]
+headless = true
+runOnSave = false
+# XSRF + CORS are intentionally left at their secure defaults (enabled).
+# Megan stores user-supplied API keys in session state, so disabling these
+# would let a malicious cross-origin page trigger an authenticated agent
+# run with the victim's keys.
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+showErrorDetails = true

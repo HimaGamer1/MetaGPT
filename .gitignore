@@ -113,6 +113,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.venv-*/
 env/
 venv/
 ENV/
@@ -198,3 +199,4 @@ metagpt/ext/sela/results/*
 
 metagpt/ext/aflow/data
 metagpt/ext/aflow/scripts/optimized
+test_plan.md

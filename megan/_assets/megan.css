@@ -1,0 +1,385 @@
+/*
+ * Megan brand styling.
+ * Palette:
+ *   --megan-primary       #6D28D9  deep violet
+ *   --megan-primary-soft  #EDE9FE  violet 100
+ *   --megan-primary-dark  #4C1D95
+ *   --megan-accent        #F59E0B  amber 500
+ *   --megan-accent-soft   #FEF3C7  amber 100
+ *   --megan-bg            #FAF8F5  warm cream
+ *   --megan-surface       #FFFFFF
+ *   --megan-border        #E5E7EB
+ *   --megan-text          #1F2937
+ *   --megan-muted         #6B7280
+ *   --megan-success       #10B981
+ *   --megan-error         #EF4444
+ */
+
+:root {
+    --megan-primary: #6D28D9;
+    --megan-primary-soft: #EDE9FE;
+    --megan-primary-dark: #4C1D95;
+    --megan-accent: #F59E0B;
+    --megan-accent-soft: #FEF3C7;
+    --megan-bg: #FAF8F5;
+    --megan-surface: #FFFFFF;
+    --megan-border: #E5E7EB;
+    --megan-text: #1F2937;
+    --megan-muted: #6B7280;
+    --megan-success: #10B981;
+    --megan-error: #EF4444;
+}
+
+/* Global background */
+.stApp {
+    background: linear-gradient(180deg, #FAF8F5 0%, #F5F1EA 100%);
+}
+
+/* Headings */
+h1, h2, h3, h4 {
+    color: var(--megan-text);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* Hero card */
+.megan-hero {
+    background: linear-gradient(135deg, #6D28D9 0%, #8B5CF6 50%, #F59E0B 130%);
+    color: #FFFFFF;
+    border-radius: 18px;
+    padding: 28px 32px;
+    margin-bottom: 28px;
+    box-shadow: 0 12px 40px rgba(109, 40, 217, 0.18);
+}
+
+.megan-hero h1 {
+    color: #FFFFFF;
+    font-size: 2.4rem;
+    margin: 0 0 6px 0;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.megan-hero .megan-tagline {
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 1.05rem;
+    margin: 0;
+    font-weight: 500;
+}
+
+.megan-hero .megan-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    margin-right: 14px;
+    font-weight: 800;
+    font-size: 1.6rem;
+    color: #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    vertical-align: middle;
+}
+
+/* Section card */
+.megan-card {
+    background: var(--megan-surface);
+    border: 1px solid var(--megan-border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
+    margin-bottom: 18px;
+}
+
+.megan-card h3 {
+    margin-top: 0;
+    color: var(--megan-text);
+    font-size: 1.15rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.megan-card h3 .megan-pill {
+    background: var(--megan-primary-soft);
+    color: var(--megan-primary-dark);
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+/* Section header (Step 1, Step 2, …) used inside bordered containers */
+.megan-section-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.megan-section-head .megan-step {
+    background: var(--megan-primary);
+    color: #FFFFFF;
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    box-shadow: 0 4px 12px rgba(109, 40, 217, 0.18);
+}
+
+.megan-section-head .megan-section-title {
+    color: var(--megan-text);
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.megan-section-head .megan-pill {
+    background: var(--megan-accent-soft);
+    color: #92400E;
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+/* Streamlit's bordered container — give it Megan polish */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border-color: var(--megan-border) !important;
+    border-radius: 14px !important;
+    background: var(--megan-surface);
+    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
+    padding: 4px 6px !important;
+}
+
+/* Status badges */
+.megan-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-right: 6px;
+}
+
+.megan-badge--ok {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.megan-badge--warn {
+    background: var(--megan-accent-soft);
+    color: #92400E;
+}
+
+.megan-badge--info {
+    background: var(--megan-primary-soft);
+    color: var(--megan-primary-dark);
+}
+
+/* Buttons */
+.stButton > button {
+    background: var(--megan-primary);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-weight: 600;
+    transition: transform 0.05s ease, background 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 4px 14px rgba(109, 40, 217, 0.25);
+}
+
+.stButton > button:hover {
+    background: var(--megan-primary-dark);
+    color: #FFFFFF;
+}
+
+.stButton > button:active {
+    transform: translateY(1px);
+}
+
+/* Inputs */
+.stTextInput > div > div > input,
+.stTextArea textarea,
+.stNumberInput input,
+.stSelectbox > div > div {
+    border-radius: 10px !important;
+    border-color: var(--megan-border) !important;
+}
+
+.stTextInput > div > div > input:focus,
+.stTextArea textarea:focus {
+    border-color: var(--megan-primary) !important;
+    box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.12) !important;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background: #FFFFFF;
+    border-right: 1px solid var(--megan-border);
+}
+
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3 {
+    color: var(--megan-primary-dark);
+}
+
+/* Code & log block */
+.megan-log {
+    background: #0F172A;
+    color: #E2E8F0;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+    max-height: 420px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    border: 1px solid #1E293B;
+}
+
+/* Footer */
+.megan-footer {
+    color: var(--megan-muted);
+    font-size: 0.85rem;
+    text-align: center;
+    margin-top: 32px;
+    padding-top: 18px;
+    border-top: 1px dashed var(--megan-border);
+}
+
+/* Tab styling */
+button[data-baseweb="tab"] {
+    color: var(--megan-muted);
+    font-weight: 600;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: var(--megan-primary);
+}
+
+/* Inline log (chat assistant "thinking" trace) */
+.megan-log--inline {
+    max-height: 160px;
+    font-size: 0.78rem;
+    margin-top: 8px;
+    padding: 10px 12px;
+}
+
+/* Chat tab — todo list panel */
+.megan-todo-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin: 0 0 10px 0;
+    padding: 0 0 8px 0;
+    border-bottom: 1px dashed var(--megan-border);
+}
+
+.megan-todo-head .megan-todo-title {
+    color: var(--megan-primary-dark);
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: -0.01em;
+}
+
+.megan-todo-head .megan-todo-sub {
+    color: var(--megan-muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.megan-todo {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.megan-todo--empty {
+    color: var(--megan-muted);
+    font-size: 0.85rem;
+    padding: 14px 12px;
+    border: 1px dashed var(--megan-border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.6);
+    text-align: center;
+}
+
+.megan-todo-item {
+    display: grid;
+    grid-template-columns: 22px 36px 1fr;
+    align-items: start;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--megan-border);
+    border-radius: 10px;
+    background: var(--megan-surface);
+    font-size: 0.85rem;
+    line-height: 1.35;
+}
+
+.megan-todo-item--done {
+    border-color: #A7F3D0;
+    background: #ECFDF5;
+}
+
+.megan-todo-item--running {
+    border-color: var(--megan-primary);
+    background: var(--megan-primary-soft);
+    box-shadow: 0 2px 12px rgba(109, 40, 217, 0.12);
+}
+
+.megan-todo-item--pending {
+    background: rgba(255, 255, 255, 0.85);
+}
+
+.megan-todo-mark {
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--megan-muted);
+}
+
+.megan-todo-item--done .megan-todo-mark { color: var(--megan-success); }
+.megan-todo-item--running .megan-todo-mark { color: var(--megan-primary); }
+
+.megan-todo-id {
+    font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+    color: var(--megan-muted);
+    font-size: 0.72rem;
+    padding-top: 2px;
+}
+
+.megan-todo-text {
+    color: var(--megan-text);
+    word-break: break-word;
+}
+
+/* Chat messages */
+[data-testid="stChatMessage"] {
+    background: var(--megan-surface);
+    border: 1px solid var(--megan-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+}
+
+/* Hide Streamlit default chrome that fights the brand */
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
+header[data-testid="stHeader"] { background: transparent; }
