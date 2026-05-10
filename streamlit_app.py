@@ -207,8 +207,20 @@ def apply_user_config() -> tuple[bool, str]:
 
     # Deep-copy so the per-session config is fully detached from the
     # global singleton; this prevents API-key leakage between sessions.
+    # Pydantic does not coerce strings to enums on attribute assignment
+    # (validate_assignment is off on the framework's YamlModel), so we have
+    # to construct the enum explicitly or the LLM provider registry lookup
+    # will fail with KeyError on the raw string.
+    from metagpt.configs.llm_config import LLMType
+    from metagpt.configs.search_config import SearchEngineType
+
+    try:
+        llm_type_enum = LLMType(api_type)
+    except ValueError:
+        return False, f"Unsupported provider api_type: {api_type!r}"
+
     session_config = copy.deepcopy(global_config)
-    session_config.llm.api_type = api_type  # type: ignore[assignment]
+    session_config.llm.api_type = llm_type_enum
     session_config.llm.api_key = api_key or "ollama"
     session_config.llm.base_url = base_url
     session_config.llm.model = model
@@ -216,7 +228,7 @@ def apply_user_config() -> tuple[bool, str]:
         session_config.llm.api_version = (st.session_state.api_version or "").strip() or None
 
     if st.session_state.search_api_key.strip():
-        session_config.search.api_type = "google"  # type: ignore[assignment]
+        session_config.search.api_type = SearchEngineType.DIRECT_GOOGLE
         session_config.search.api_key = st.session_state.search_api_key.strip()
         session_config.search.cse_id = st.session_state.search_cse_id.strip()
 
