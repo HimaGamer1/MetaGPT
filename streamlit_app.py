@@ -14,9 +14,10 @@ framework (re-exported via :mod:`megan`) with:
 from __future__ import annotations
 
 import asyncio
+import copy
+import html
 import io
 import logging
-import os
 import sys
 import threading
 import time
@@ -167,10 +168,16 @@ _init_state()
 
 
 def apply_user_config() -> tuple[bool, str]:
-    """Push the user-entered settings into the Megan/metagpt config object.
+    """Build a per-session Megan config from the user's inputs.
 
-    Returns (ok, message). On success the config is mutated in place so that
-    subsequent calls to ``Team.run`` see the new keys.
+    Streamlit shares the same Python process across all browser sessions,
+    so mutating ``metagpt.config2.config`` (a module-level singleton) would
+    leak one user's keys into another user's run. Instead we build a fresh
+    :class:`metagpt.config2.Config` per session and stash it in
+    ``st.session_state["megan_config"]``. The worker thread then receives
+    that isolated copy, never the global one.
+
+    Returns ``(ok, message)``.
     """
 
     provider_meta = PROVIDERS[st.session_state.provider]
@@ -188,28 +195,26 @@ def apply_user_config() -> tuple[bool, str]:
 
     # Lazy-import so the page renders even when heavy deps are missing.
     try:
-        from megan import config as megan_config
+        from megan import config as global_config
     except Exception as exc:  # pragma: no cover - import diagnostics
         return False, f"Could not load Megan runtime: {exc}"
 
-    megan_config.llm.api_type = api_type  # type: ignore[assignment]
-    megan_config.llm.api_key = api_key or "ollama"
-    megan_config.llm.base_url = base_url
-    megan_config.llm.model = model
+    # Deep-copy so the per-session config is fully detached from the
+    # global singleton; this prevents API-key leakage between sessions.
+    session_config = copy.deepcopy(global_config)
+    session_config.llm.api_type = api_type  # type: ignore[assignment]
+    session_config.llm.api_key = api_key or "ollama"
+    session_config.llm.base_url = base_url
+    session_config.llm.model = model
     if provider_meta.get("needs_api_version"):
-        megan_config.llm.api_version = (st.session_state.api_version or "").strip() or None
+        session_config.llm.api_version = (st.session_state.api_version or "").strip() or None
 
     if st.session_state.search_api_key.strip():
-        megan_config.search.api_type = "google"  # type: ignore[assignment]
-        megan_config.search.api_key = st.session_state.search_api_key.strip()
-        megan_config.search.cse_id = st.session_state.search_cse_id.strip()
+        session_config.search.api_type = "google"  # type: ignore[assignment]
+        session_config.search.api_key = st.session_state.search_api_key.strip()
+        session_config.search.cse_id = st.session_state.search_cse_id.strip()
 
-    # Surface keys to env too, for libraries that read os.environ directly.
-    if api_type == "openai":
-        os.environ["OPENAI_API_KEY"] = api_key
-    if api_type == "anthropic":
-        os.environ["ANTHROPIC_API_KEY"] = api_key
-
+    st.session_state["megan_config"] = session_config
     st.session_state.config_saved = True
     return True, f"Megan is configured to use {st.session_state.provider} ({model})."
 
@@ -240,11 +245,17 @@ def _run_team_worker(
     investment: float,
     n_round: int,
     selected_roles: list[str],
+    session_config: Any,
     sink: list[str],
     lock: threading.Lock,
     status: dict[str, Any],
 ) -> None:
-    """Run the Megan team. Lives on a worker thread."""
+    """Run the Megan team. Lives on a worker thread.
+
+    ``session_config`` MUST be the per-session Config built by
+    :func:`apply_user_config` — never the global ``megan.config`` — so
+    concurrent users do not clobber each other's API keys.
+    """
 
     capture = _StreamCapture(sink, lock)
 
@@ -272,7 +283,6 @@ def _run_team_worker(
                 QaEngineer,
                 Team,
                 TeamLeader,
-                config,
             )
 
             role_factory = {
@@ -288,7 +298,7 @@ def _run_team_worker(
             if not roles:
                 roles = [TeamLeader(), ProductManager(), Architect(), Engineer2()]
 
-            ctx = Context(config=config)
+            ctx = Context(config=session_config)
             team = Team(context=ctx)
             team.hire(roles)
             team.invest(investment)
@@ -499,12 +509,25 @@ def render_run_tab() -> None:
                 st.info("Describe the project Megan should build.")
 
     if run_clicked:
+        session_config = st.session_state.get("megan_config")
+        if session_config is None:
+            st.error("No saved configuration — please re-save your API key on the API keys tab.")
+            return
         sink: list[str] = []
         lock = threading.Lock()
         status: dict[str, Any] = {"state": "running"}
         thread = threading.Thread(
             target=_run_team_worker,
-            args=(idea.strip(), float(investment), int(n_round), roles, sink, lock, status),
+            args=(
+                idea.strip(),
+                float(investment),
+                int(n_round),
+                roles,
+                session_config,
+                sink,
+                lock,
+                status,
+            ),
             daemon=True,
         )
         thread.start()
@@ -524,8 +547,9 @@ def render_run_tab() -> None:
             while thread.is_alive():
                 with lock:
                     snapshot = "".join(sink[-2000:])
+                escaped = html.escape(snapshot) if snapshot else "Booting up the Megan team…"
                 log_box.markdown(
-                    f'<div class="megan-log">{snapshot or "Booting up the Megan team…"}</div>',
+                    f'<div class="megan-log">{escaped}</div>',
                     unsafe_allow_html=True,
                 )
                 progress_box.caption(f"Status: running · {time.strftime('%H:%M:%S')}")
@@ -535,7 +559,7 @@ def render_run_tab() -> None:
             with lock:
                 final_log = "".join(sink)
             log_box.markdown(
-                f'<div class="megan-log">{final_log or "(no output)"}</div>',
+                f'<div class="megan-log">{html.escape(final_log) if final_log else "(no output)"}</div>',
                 unsafe_allow_html=True,
             )
 

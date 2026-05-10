@@ -12,8 +12,10 @@ font = "sans serif"
 [server]
 headless = true
 runOnSave = false
-enableXsrfProtection = false
-enableCORS = false
+# XSRF + CORS are intentionally left at their secure defaults (enabled).
+# Megan stores user-supplied API keys in session state, so disabling these
+# would let a malicious cross-origin page trigger an authenticated agent
+# run with the victim's keys.
 
 [browser]
 gatherUsageStats = false
